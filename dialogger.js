@@ -1,8 +1,18 @@
-var fs = require('fs');
+const fs = require('fs');
+
+// Electron modules
+const {remote} = require('electron');
+const {Menu, MenuItem} = remote;
+const {dialog} = remote;
+
+// Dependencies
+const jQuery = $ = require('jquery');
+const lodash = _ = require('lodash');
+const joint = require('jointjs');
 
 // Constants
 
-var con =
+const con =
 {
 	allowable_connections:
 	[
@@ -547,12 +557,30 @@ func.filename_from_filepath = function(f)
 
 func.show_open_dialog = function()
 {
-	$('#file_open').click();
+	dialog.showOpenDialog({
+		filters: [
+			{ name: 'Dialogger Files', extensions: ['dl'] }
+		]
+	}, function (fileNames) {
+	    if (fileNames === undefined)
+	    	return;
+	    else
+		    func.handle_open_files(fileNames[0]);
+	});
 };
 
 func.show_save_dialog = function()
 {
-	$('#file_save').click();
+	dialog.showSaveDialog({
+		filters: [
+			{ name: 'Dialogger Files', extensions: ['dl'] }
+		]
+	}, function (fileName) {
+	    if (fileName === undefined)
+	    	return;
+	    else
+		    func.handle_save_files(fileName);
+	});
 };
 
 func.add_node = function(constructor)
@@ -575,18 +603,18 @@ func.clear = function()
 	document.title = 'Dialogger';
 };
 
-func.handle_open_files = function(files)
+func.handle_open_files = function(filepath)
 {
-	state.filepath = files[0].path;
+	state.filepath = filepath;
 	var data = fs.readFileSync(state.filepath);
 	document.title = func.filename_from_filepath(state.filepath);
 	state.graph.clear();
 	state.graph.fromJSON(JSON.parse(data));
 };
 
-func.handle_save_files = function(files)
+func.handle_save_files = function(filepath)
 {
-	state.filepath = files[0].path;
+	state.filepath = filepath;
 	func.do_save();
 };
 
@@ -640,21 +668,6 @@ func.handle_save_files = function(files)
 	{
 		state.panning = false;
 		$('body').css('cursor', 'default');
-	});
-
-	$('#file_open').on('change', function()
-	{
-		if (this.files)
-			func.handle_open_files(this.files);
-		// clear files from this input
-		var $this = $(this);
-		$this.wrap('<form>').parent('form').trigger('reset');
-		$this.unwrap();
-	});
-
-	$('#file_save').on('change', function()
-	{
-		func.handle_save_files(this.files);
 	});
 
 	$('body').on('dragenter', function(e)
@@ -716,16 +729,16 @@ func.handle_save_files = function(files)
 
 	// Context menu
 
-	state.menu = new nw.Menu();
-	state.menu.append(new nw.MenuItem({ label: 'Text', click: func.add_node(joint.shapes.dialogue.Text) }));
-	state.menu.append(new nw.MenuItem({ label: 'Choice', click: func.add_node(joint.shapes.dialogue.Choice) }));
-	state.menu.append(new nw.MenuItem({ label: 'Branch', click: func.add_node(joint.shapes.dialogue.Branch) }));
-	state.menu.append(new nw.MenuItem({ label: 'Set', click: func.add_node(joint.shapes.dialogue.Set) }));
-	state.menu.append(new nw.MenuItem({ label: 'Node', click: func.add_node(joint.shapes.dialogue.Node) }));
-	state.menu.append(new nw.MenuItem({ type: 'separator' }));
-	state.menu.append(new nw.MenuItem({ label: 'Save', click: func.save }));
-	state.menu.append(new nw.MenuItem({ label: 'Open', click: func.show_open_dialog }));
-	state.menu.append(new nw.MenuItem({ label: 'New', click: func.clear }));
+	state.menu = new Menu();
+	state.menu.append(new MenuItem({ label: 'Text', click: func.add_node(joint.shapes.dialogue.Text) }));
+	state.menu.append(new MenuItem({ label: 'Choice', click: func.add_node(joint.shapes.dialogue.Choice) }));
+	state.menu.append(new MenuItem({ label: 'Branch', click: func.add_node(joint.shapes.dialogue.Branch) }));
+	state.menu.append(new MenuItem({ label: 'Set', click: func.add_node(joint.shapes.dialogue.Set) }));
+	state.menu.append(new MenuItem({ label: 'Node', click: func.add_node(joint.shapes.dialogue.Node) }));
+	state.menu.append(new MenuItem({ type: 'separator' }));
+	state.menu.append(new MenuItem({ label: 'Save', click: func.save }));
+	state.menu.append(new MenuItem({ label: 'Open', click: func.show_open_dialog }));
+	state.menu.append(new MenuItem({ label: 'New', click: func.clear }));
 
 	document.body.addEventListener('contextmenu', function(e)
 	{
