@@ -546,6 +546,7 @@ func.do_save = function()
 	{
 		fs.writeFileSync(state.filepath, JSON.stringify(state.graph), 'utf8');
 		fs.writeFileSync(func.optimized_filename(state.filepath), JSON.stringify(func.optimized_data()), 'utf8');
+		document.title = "Dialogger - " + func.filename_from_filepath(state.filepath);
 		func.flash('Saved ' + state.filepath);
 	}
 };
@@ -596,6 +597,14 @@ func.add_node = function(constructor)
 	};
 };
 
+func.confirm_new = function()
+{
+	if (confirm("Any unsaved changes will be lost. Create a new file?"))
+	{
+		func.clear();
+	}
+}
+
 func.clear = function()
 {
 	state.graph.clear();
@@ -607,7 +616,7 @@ func.handle_open_files = function(filepath)
 {
 	state.filepath = filepath;
 	var data = fs.readFileSync(state.filepath);
-	document.title = func.filename_from_filepath(state.filepath);
+	document.title = "Dialogger - " + func.filename_from_filepath(state.filepath);
 	state.graph.clear();
 	state.graph.fromJSON(JSON.parse(data));
 };
@@ -698,19 +707,27 @@ func.handle_save_files = function(filepath)
 	$(window).on('keydown', function(event)
 	{
 		// Catch Ctrl-S or key code 19 on Mac (Cmd-S)
-		if (((event.ctrlKey || event.metaKey) && String.fromCharCode(event.which).toLowerCase() === 's') || event.which === 19)
+		if (event.ctrlKey || event.metaKey)
 		{
-			event.stopPropagation();
-			event.preventDefault();
-			func.save();
-			return false;
-		}
-		else if ((event.ctrlKey || event.metaKey) && String.fromCharCode(event.which).toLowerCase() === 'o')
-		{
-			event.stopPropagation();
-			event.preventDefault();
-			func.show_open_dialog();
-			return false;
+			if (String.fromCharCode(event.which).toLowerCase() === 's' || event.which === 19)
+			{
+				event.stopPropagation();
+				event.preventDefault();
+				func.save();
+				return false;
+			}
+			else if (String.fromCharCode(event.which).toLowerCase() === 'o')
+			{
+				event.stopPropagation();
+				event.preventDefault();
+				func.show_open_dialog();
+				return false;
+			}
+			else if (String.fromCharCode(event.which).toLowerCase() === 'n')
+			{
+				func.confirm_new();
+				return false;
+			}
 		}
 		return true;
 	});
@@ -728,17 +745,12 @@ func.handle_save_files = function(filepath)
 	$(window).trigger('resize');
 
 	// Context menu
-
 	state.menu = new Menu();
 	state.menu.append(new MenuItem({ label: 'Text', click: func.add_node(joint.shapes.dialogue.Text) }));
 	state.menu.append(new MenuItem({ label: 'Choice', click: func.add_node(joint.shapes.dialogue.Choice) }));
 	state.menu.append(new MenuItem({ label: 'Branch', click: func.add_node(joint.shapes.dialogue.Branch) }));
 	state.menu.append(new MenuItem({ label: 'Set', click: func.add_node(joint.shapes.dialogue.Set) }));
 	state.menu.append(new MenuItem({ label: 'Node', click: func.add_node(joint.shapes.dialogue.Node) }));
-	state.menu.append(new MenuItem({ type: 'separator' }));
-	state.menu.append(new MenuItem({ label: 'Save', click: func.save }));
-	state.menu.append(new MenuItem({ label: 'Open', click: func.show_open_dialog }));
-	state.menu.append(new MenuItem({ label: 'New', click: func.clear }));
 
 	document.body.addEventListener('contextmenu', function(e)
 	{
@@ -748,4 +760,168 @@ func.handle_save_files = function(filepath)
 		state.menu.popup(e.x, e.y);
 		return false;
 	}, false);
+
+	// Native App Menu
+	const appMenuTemplate = [
+	  {
+	    label: 'File',
+	    submenu: [
+	      {
+	        label: 'Save',
+	        click() { func.save(); }
+	      },
+	      {
+	        label: 'Open',
+	        click() { func.show_open_dialog(); }
+	      },
+	      {
+	        label: 'New',
+	        click() { func.confirm_new(); }
+	      },
+	      {
+	        type: 'separator'
+	      },
+	      {
+	        role: 'quit'
+	      }
+	    ]
+	  },
+	  {
+	    label: 'Edit',
+	    submenu: [
+	      {
+	        role: 'undo'
+	      },
+	      {
+	        role: 'redo'
+	      },
+	      {
+	        type: 'separator'
+	      },
+	      {
+	        role: 'cut'
+	      },
+	      {
+	        role: 'copy'
+	      },
+	      {
+	        role: 'paste'
+	      },
+	      {
+	        role: 'delete'
+	      },
+	      {
+	        role: 'selectall'
+	      },
+	    ]
+	  },
+	  {
+	    label: 'View',
+	    submenu: [
+	      {
+	        label: 'Reload',
+	        accelerator: 'CmdOrCtrl+R',
+	        click(item, focusedWindow) {
+	          if (focusedWindow) focusedWindow.reload();
+	        }
+	      },
+	      {
+	        role: 'togglefullscreen'
+	      },
+	      {
+	        label: 'Toggle Developer Tools',
+	        accelerator: process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I',
+	        click(item, focusedWindow) {
+	          if (focusedWindow)
+	            focusedWindow.webContents.toggleDevTools();
+	        }
+	      },
+	    ]
+	  },
+	  {
+	    role: 'window',
+	    submenu: [
+	      {
+	        role: 'minimize'
+	      },
+	      {
+	        role: 'close'
+	      },
+	    ]
+	  },
+	  {
+	    role: 'help',
+	    submenu: [
+	      {
+	        label: 'Learn More',
+	        click() { require('electron').shell.openExternal('http://electron.atom.io'); }
+	      },
+	    ]
+	  },
+	];
+
+	if (process.platform === 'darwin') {
+	  const name = require('electron').remote.app.getName();
+	  appMenuTemplate.unshift({
+	    label: name,
+	    submenu: [
+	      {
+	        role: 'about'
+	      },
+	      {
+	        type: 'separator'
+	      },
+	      {
+	        role: 'services',
+	        submenu: []
+	      },
+	      {
+	        type: 'separator'
+	      },
+	      {
+	        role: 'hide'
+	      },
+	      {
+	        role: 'hideothers'
+	      },
+	      {
+	        role: 'unhide'
+	      },
+	      {
+	        type: 'separator'
+	      },
+	      {
+	        role: 'quit'
+	      },
+	    ]
+	  });
+	  // Window menu.
+	  appMenuTemplate[3].submenu = [
+	    {
+	      label: 'Close',
+	      accelerator: 'CmdOrCtrl+W',
+	      role: 'close'
+	    },
+	    {
+	      label: 'Minimize',
+	      accelerator: 'CmdOrCtrl+M',
+	      role: 'minimize'
+	    },
+	    {
+	      label: 'Zoom',
+	      role: 'zoom'
+	    },
+	    {
+	      type: 'separator'
+	    },
+	    {
+	      label: 'Bring All to Front',
+	      role: 'front'
+	    }
+	  ];
+	}
+
+	const appMenu = Menu.buildFromTemplate(appMenuTemplate);
+	Menu.setApplicationMenu(appMenu);
+
 })();
