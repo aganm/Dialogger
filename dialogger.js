@@ -11,7 +11,6 @@ const lodash = _ = require('lodash');
 const joint = require('jointjs');
 
 // Constants
-
 const con =
 {
 	allowable_connections:
@@ -51,8 +50,9 @@ const con =
 };
 con.default_link.set('smooth', true);
 
-// State
+const isOSX = process.platform === 'darwin';
 
+// State
 var state =
 {
 	graph: new joint.dia.Graph(),
@@ -65,7 +65,6 @@ var state =
 };
 
 // Models
-
 joint.shapes.dialogue = {};
 joint.shapes.dialogue.Base = joint.shapes.devs.Model.extend(
 {
@@ -352,7 +351,6 @@ joint.shapes.dialogue.SetView = joint.shapes.dialogue.BaseView.extend(
 });
 
 // Functions
-
 var func = {};
 
 func.validate_connection = function(cellViewS, magnetS, cellViewT, magnetT, end, linkView)
@@ -509,7 +507,6 @@ func.optimized_data = function()
 };
 
 // Menu actions
-
 func.flash = function(text)
 {
 	var $flash = $('#flash');
@@ -525,11 +522,11 @@ func.apply_fields = function()
 	$('input[type=text], select').blur();
 };
 
-func.save = function()
+func.save = function(saveAs)
 {
 	func.apply_fields();
 
-	if (!state.filepath)
+	if (saveAs || !state.filepath)
 		func.show_save_dialog();
 	else
 		func.do_save();
@@ -537,7 +534,7 @@ func.save = function()
 
 func.optimized_filename = function(f)
 {
-	return f.substring(0, f.length - 2) + 'dlz';
+	return f.substring(0, f.length - 2) + 'json';
 };
 
 func.do_save = function()
@@ -545,10 +542,28 @@ func.do_save = function()
 	if (state.filepath)
 	{
 		fs.writeFileSync(state.filepath, JSON.stringify(state.graph), 'utf8');
-		fs.writeFileSync(func.optimized_filename(state.filepath), JSON.stringify(func.optimized_data()), 'utf8');
 		document.title = "Dialogger - " + func.filename_from_filepath(state.filepath);
 		func.flash('Saved ' + state.filepath);
 	}
+};
+
+func.export = function()
+{
+	dialog.showOpenDialog({
+		title: 'Export To',
+		buttonLabel: 'Export',
+		filters: [
+			{ name: 'JSON File', extensions: ['json'] }
+		]
+	}, function (fileNames) {
+	    if (fileNames === undefined)
+	    	return;
+	    else
+		{
+		    fs.writeFileSync(fileName, JSON.stringify(func.optimized_data()), 'utf8');
+			func.flash('Exported to ' + fileName);
+	    }
+	});
 };
 
 func.filename_from_filepath = function(f)
@@ -628,7 +643,6 @@ func.handle_save_files = function(filepath)
 };
 
 // Initialize
-
 (function()
 {
 	state.paper = new joint.dia.Paper(
@@ -704,34 +718,6 @@ func.handle_save_files = function(filepath)
 		func.handle_open_files(e.originalEvent.dataTransfer.files);
 	});
 
-	$(window).on('keydown', function(event)
-	{
-		// Catch Ctrl-S or key code 19 on Mac (Cmd-S)
-		if (event.ctrlKey || event.metaKey)
-		{
-			if (String.fromCharCode(event.which).toLowerCase() === 's' || event.which === 19)
-			{
-				event.stopPropagation();
-				event.preventDefault();
-				func.save();
-				return false;
-			}
-			else if (String.fromCharCode(event.which).toLowerCase() === 'o')
-			{
-				event.stopPropagation();
-				event.preventDefault();
-				func.show_open_dialog();
-				return false;
-			}
-			else if (String.fromCharCode(event.which).toLowerCase() === 'n')
-			{
-				func.confirm_new();
-				return false;
-			}
-		}
-		return true;
-	});
-
 	$(window).resize(function()
 	{
 		func.apply_fields();
@@ -767,16 +753,31 @@ func.handle_save_files = function(filepath)
 	    label: 'File',
 	    submenu: [
 	      {
-	        label: 'Save',
-	        click() { func.save(); }
+	        label: 'New',
+	        accelerator: 'CmdOrCtrl+N',
+	        click() { func.confirm_new(); }
 	      },
 	      {
-	        label: 'Open',
+	        label: 'Open...',
+	        accelerator: 'CmdOrCtrl+O',
 	        click() { func.show_open_dialog(); }
 	      },
 	      {
-	        label: 'New',
-	        click() { func.confirm_new(); }
+	        label: 'Save',
+	        accelerator: 'CmdOrCtrl+S',
+	        click() { func.save(); }
+	      },
+	      {
+	        label: 'Save As...',
+	        accelerator: 'CmdOrCtrl+Shift+S',
+	        click() { func.save(true); }
+	      },
+	      {
+	        type: 'separator'
+	      },
+	      {
+	        label: 'Export...',
+	        click() { func.export(); }
 	      },
 	      {
 	        type: 'separator'
@@ -790,15 +791,6 @@ func.handle_save_files = function(filepath)
 	    label: 'Edit',
 	    submenu: [
 	      {
-	        role: 'undo'
-	      },
-	      {
-	        role: 'redo'
-	      },
-	      {
-	        type: 'separator'
-	      },
-	      {
 	        role: 'cut'
 	      },
 	      {
@@ -806,35 +798,14 @@ func.handle_save_files = function(filepath)
 	      },
 	      {
 	        role: 'paste'
-	      },
-	      {
-	        role: 'delete'
-	      },
-	      {
-	        role: 'selectall'
-	      },
+	      }
 	    ]
 	  },
 	  {
 	    label: 'View',
 	    submenu: [
 	      {
-	        label: 'Reload',
-	        accelerator: 'CmdOrCtrl+R',
-	        click(item, focusedWindow) {
-	          if (focusedWindow) focusedWindow.reload();
-	        }
-	      },
-	      {
 	        role: 'togglefullscreen'
-	      },
-	      {
-	        label: 'Toggle Developer Tools',
-	        accelerator: process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I',
-	        click(item, focusedWindow) {
-	          if (focusedWindow)
-	            focusedWindow.webContents.toggleDevTools();
-	        }
 	      },
 	    ]
 	  },
@@ -854,13 +825,13 @@ func.handle_save_files = function(filepath)
 	    submenu: [
 	      {
 	        label: 'Learn More',
-	        click() { require('electron').shell.openExternal('http://electron.atom.io'); }
+	        click() { require('electron').shell.openExternal('https://github.com/Alamantus/dialogger'); }
 	      },
 	    ]
 	  },
 	];
 
-	if (process.platform === 'darwin') {
+	if (isOSX) {
 	  const name = require('electron').remote.app.getName();
 	  appMenuTemplate.unshift({
 	    label: name,
@@ -870,10 +841,6 @@ func.handle_save_files = function(filepath)
 	      },
 	      {
 	        type: 'separator'
-	      },
-	      {
-	        role: 'services',
-	        submenu: []
 	      },
 	      {
 	        type: 'separator'
@@ -906,10 +873,6 @@ func.handle_save_files = function(filepath)
 	      label: 'Minimize',
 	      accelerator: 'CmdOrCtrl+M',
 	      role: 'minimize'
-	    },
-	    {
-	      label: 'Zoom',
-	      role: 'zoom'
 	    },
 	    {
 	      type: 'separator'

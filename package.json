@@ -12,7 +12,7 @@
     }
   ],
   "scripts": {
-    "start": "electron app.js"
+    "start": "./node_modules/.bin/electron ."
   },
   "repository": {
     "type": "git",

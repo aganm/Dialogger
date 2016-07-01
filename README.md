@@ -1,15 +1,16 @@
 Dialogger
 =========
 
-[![Dialogger](http://i.imgur.com/ojQbysnl.png)](http://i.imgur.com/ojQbysn.png)
+[![Dialogger](http://i.imgur.com/KliEDM7.png)](http://i.imgur.com/KliEDM7.png)
 
 Dialogger is a simple dialogue graph editor. It saves your dialogue graph in
 two file formats:
 
 - **.dl** - JSON file including all visual layout information
-- **.dlz** - optimized JSON, easier and faster to parse
+- **.json** - (when using "Export..." dialog) Optimized JSON, easier to parse in
+    other systems.
 
-It uses [NW.js](http://nwjs.io/) and [JointJS](http://www.jointjs.com/).
+It uses [Electron](http://electron.atom.io/) and [JointJS](http://www.jointjs.com/).
 
 Read more about the rationale
 [here](http://etodd.io/2014/05/16/the-poor-mans-dialogue-tree/).
@@ -17,15 +18,39 @@ Read more about the rationale
 Running
 -------
 
-Binaries are provided, but if you want to hack on the project, first download
-the NW.js SDK, then:
+Navigate to the project folder install the dependencies with NodeJS + NPM using:
 
-```shell
-cd /path/to/app
-/path/to/nwjs/nw .
+```
+npm install
 ```
 
-See the [NW.js docs](http://docs.nwjs.io/) for more info.
+After all the dependencies are installed (Electron is an included dependency),
+just run it:
+
+```
+npm start
+```
+
+Usage
+-----
+
+Click and drag the grid to navigate around.
+
+Right click on the grid to select the type of node to create:
+
+- **Text** - Create a simple node for a string of text.
+- **Choice** - Branch from a text node with multiple options.
+- **Branch** - A switch/case list for previously set variables. Click the `+`
+    to add more cases and the `-` to remove (from the bottom).
+- **Set** - Name and set a variable.
+- **Node** - ??? This is identical to Text, so I'm not sure why it's here.
+
+After creating a node, click and drag from the green semicircle of the node to
+another node's red semicircle to connect them. You can change which node an
+arrow is attached to by clicking and dragging the appropriate end of the
+arrow.
+
+Click the X anywhere you see it to delete the attached thing.
 
 The MIT License
 ---------------
