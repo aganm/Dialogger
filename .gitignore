@@ -3,3 +3,4 @@ node_modules/
 *.dl
 *.dlz
 releases/
+package-lock.json
