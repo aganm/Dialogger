@@ -560,7 +560,7 @@ func.export = function()
 	    	return;
 	    else
 		{
-		    fs.writeFileSync(fileName, JSON.stringify(func.optimized_data()), 'utf8');
+		    fs.writeFileSync(fileName, JSON.stringify(func.optimized_data(), null, "\t"), 'utf8');
 			func.flash('Exported to ' + fileName);
 	    }
 	});
